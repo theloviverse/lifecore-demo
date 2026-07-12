@@ -1,0 +1,2479 @@
+<!DOCTYPE html>
+<html lang="hu">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="color-scheme" content="dark">
+  <title>LifeCore OS — Command Center</title>
+  <style>
+    :root {
+      color-scheme: dark;
+      --canvas: #05070f;
+      --base: #0b0f1e;
+      --rail: #070a16;
+      --surface: #111731;
+      --surface-2: #0e1428;
+      --surface-3: #171f42;
+      --text: #f2ead3;
+      --muted: rgba(242, 234, 211, 0.58);
+      --faint: rgba(242, 234, 211, 0.35);
+      --border: rgba(242, 234, 211, 0.1);
+      --border-strong: rgba(242, 234, 211, 0.18);
+      --ok: #2fa3a0;
+      --ok-light: #7bd0cd;
+      --warn: #f0813a;
+      --warn-light: #f0a36a;
+      --crit: #e86a4a;
+      --info: #8fa7e8;
+      --shadow: 0 18px 50px rgba(0, 0, 0, 0.28);
+      --radius: 11px;
+      --radius-small: 8px;
+      --sidebar-width: 260px;
+      --capture-width: 350px;
+      font-family: Inter, ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+    }
+
+    * {
+      box-sizing: border-box;
+    }
+
+    html,
+    body {
+      margin: 0;
+      min-height: 100%;
+      min-width: 0;
+      overflow-x: hidden;
+      background: var(--canvas);
+      color: var(--text);
+    }
+
+    body {
+      min-height: 100vh;
+    }
+
+    button,
+    input,
+    select {
+      font: inherit;
+    }
+
+    button {
+      color: inherit;
+    }
+
+    button:focus-visible,
+    input:focus-visible,
+    select:focus-visible {
+      outline: 2px solid var(--info);
+      outline-offset: 2px;
+    }
+
+    ::-webkit-scrollbar {
+      width: 8px;
+      height: 8px;
+    }
+
+    ::-webkit-scrollbar-thumb {
+      border-radius: 999px;
+      background: rgba(242, 234, 211, 0.15);
+    }
+
+    ::-webkit-scrollbar-track {
+      background: transparent;
+    }
+
+    .app-shell {
+      display: grid;
+      grid-template-columns: var(--sidebar-width) minmax(0, 1fr) var(--capture-width);
+      min-height: 100vh;
+      background: var(--base);
+    }
+
+    .sidebar,
+    .capture-panel {
+      position: sticky;
+      top: 0;
+      height: 100vh;
+      min-width: 0;
+      overflow-y: auto;
+      background: var(--rail);
+      z-index: 20;
+    }
+
+    .sidebar {
+      display: flex;
+      flex-direction: column;
+      border-right: 1px solid var(--border);
+    }
+
+    .brand {
+      display: flex;
+      align-items: center;
+      gap: 11px;
+      padding: 18px 18px 16px;
+      border-bottom: 1px solid var(--border);
+    }
+
+    .brand img {
+      width: 34px;
+      height: 34px;
+      border-radius: 9px;
+      object-fit: cover;
+      box-shadow: 0 0 0 1px rgba(242, 234, 211, 0.12);
+    }
+
+    .brand-copy {
+      min-width: 0;
+    }
+
+    .brand-title {
+      display: block;
+      font-size: 13px;
+      font-weight: 800;
+      letter-spacing: 0.08em;
+    }
+
+    .brand-subtitle {
+      display: block;
+      margin-top: 2px;
+      color: var(--faint);
+      font-size: 10px;
+    }
+
+    .sidebar-scroll {
+      padding: 8px 0 18px;
+    }
+
+    .nav-group {
+      padding-top: 7px;
+    }
+
+    .nav-group.system-zone {
+      margin-top: 14px;
+      padding-top: 14px;
+      border-top: 1px solid var(--border);
+      opacity: 0.78;
+    }
+
+    .nav-label,
+    .eyebrow {
+      color: var(--faint);
+      font-size: 9.5px;
+      font-weight: 800;
+      letter-spacing: 0.16em;
+      text-transform: uppercase;
+    }
+
+    .nav-label {
+      padding: 9px 19px 5px;
+    }
+
+    .nav-item {
+      position: relative;
+      display: flex;
+      width: 100%;
+      align-items: center;
+      gap: 10px;
+      padding: 9px 18px;
+      border: 0;
+      border-right: 2px solid transparent;
+      background: transparent;
+      color: rgba(242, 234, 211, 0.68);
+      text-align: left;
+      cursor: pointer;
+      transition: background 150ms ease, color 150ms ease, border-color 150ms ease;
+    }
+
+    .nav-item:hover {
+      background: rgba(242, 234, 211, 0.045);
+      color: var(--text);
+    }
+
+    .nav-item[aria-current="page"] {
+      border-right-color: var(--warn);
+      background: rgba(240, 129, 58, 0.13);
+      color: var(--text);
+      font-weight: 700;
+    }
+
+    .nav-icon {
+      width: 18px;
+      color: var(--faint);
+      text-align: center;
+    }
+
+    .nav-item[aria-current="page"] .nav-icon {
+      color: var(--warn-light);
+    }
+
+    .nav-dot {
+      width: 7px;
+      height: 7px;
+      margin-left: auto;
+      border-radius: 50%;
+      background: var(--faint);
+      box-shadow: 0 0 0 3px rgba(242, 234, 211, 0.03);
+    }
+
+    .nav-dot[data-tone="ok"] {
+      background: var(--ok);
+    }
+
+    .nav-dot[data-tone="warn"] {
+      background: var(--warn);
+    }
+
+    .nav-dot[data-tone="crit"] {
+      background: var(--crit);
+    }
+
+    .privacy-card {
+      margin: auto 16px 16px;
+      padding: 12px 13px;
+      border: 1px solid rgba(47, 163, 160, 0.34);
+      border-radius: var(--radius-small);
+      background: rgba(47, 163, 160, 0.08);
+    }
+
+    .privacy-card strong {
+      display: block;
+      color: var(--ok-light);
+      font-size: 9.5px;
+      letter-spacing: 0.13em;
+    }
+
+    .privacy-card span {
+      display: block;
+      margin-top: 5px;
+      color: var(--muted);
+      font-size: 10.5px;
+      line-height: 1.45;
+    }
+
+    .main-shell {
+      min-width: 0;
+      background:
+        radial-gradient(circle at 84% -10%, rgba(143, 167, 232, 0.08), transparent 34%),
+        var(--base);
+    }
+
+    .topbar {
+      position: sticky;
+      top: 0;
+      z-index: 15;
+      display: grid;
+      grid-template-columns: minmax(0, 1fr) minmax(280px, 420px);
+      gap: 22px;
+      align-items: center;
+      padding: 16px 24px;
+      border-bottom: 1px solid var(--border);
+      background: rgba(11, 15, 30, 0.94);
+      backdrop-filter: blur(16px);
+    }
+
+    .topbar-title-row {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      min-width: 0;
+    }
+
+    .menu-button {
+      display: none;
+      width: 38px;
+      height: 38px;
+      align-items: center;
+      justify-content: center;
+      border: 1px solid var(--border-strong);
+      border-radius: var(--radius-small);
+      background: var(--surface-2);
+      cursor: pointer;
+    }
+
+    .topbar h1 {
+      margin: 0;
+      font-size: clamp(17px, 1.5vw, 19px);
+      line-height: 1.2;
+      overflow-wrap: anywhere;
+    }
+
+    .topbar-subtitle {
+      display: block;
+      margin-top: 4px;
+      color: var(--muted);
+      font-size: 11px;
+    }
+
+    .header-status {
+      display: grid;
+      grid-template-columns: auto minmax(140px, 1fr);
+      gap: 10px;
+      align-items: center;
+    }
+
+    .demo-badge,
+    .pill,
+    .status-pill,
+    .privacy-lock {
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      gap: 5px;
+      width: fit-content;
+      border-radius: 999px;
+      font-size: 9.5px;
+      font-weight: 800;
+      letter-spacing: 0.07em;
+      text-transform: uppercase;
+      white-space: nowrap;
+    }
+
+    .demo-badge {
+      padding: 6px 11px;
+      border: 1px solid rgba(240, 129, 58, 0.44);
+      background: rgba(240, 129, 58, 0.12);
+      color: var(--warn-light);
+    }
+
+    .capacity-wrap {
+      min-width: 0;
+    }
+
+    .capacity-meta {
+      display: flex;
+      justify-content: space-between;
+      gap: 10px;
+      margin-bottom: 5px;
+      color: var(--muted);
+      font-size: 10px;
+    }
+
+    .capacity-value {
+      color: var(--warn-light);
+      font-family: ui-monospace, "SFMono-Regular", Consolas, monospace;
+      font-weight: 800;
+    }
+
+    .capacity-track,
+    .mini-track {
+      overflow: hidden;
+      border-radius: 999px;
+      background: rgba(242, 234, 211, 0.08);
+    }
+
+    .capacity-track {
+      height: 8px;
+    }
+
+    .capacity-fill,
+    .mini-fill {
+      height: 100%;
+      border-radius: inherit;
+      background: linear-gradient(90deg, var(--ok), var(--warn));
+      transition: width 240ms ease;
+    }
+
+    .page-content {
+      width: 100%;
+      max-width: 1500px;
+      margin: 0 auto;
+      padding: 22px 24px 42px;
+    }
+
+    .page-content:focus {
+      outline: none;
+    }
+
+    .page {
+      min-width: 0;
+      animation: page-in 180ms ease both;
+    }
+
+    @keyframes page-in {
+      from {
+        opacity: 0;
+        transform: translateY(4px);
+      }
+      to {
+        opacity: 1;
+        transform: translateY(0);
+      }
+    }
+
+    @media (prefers-reduced-motion: reduce) {
+      *,
+      *::before,
+      *::after {
+        scroll-behavior: auto !important;
+        animation-duration: 0.01ms !important;
+        transition-duration: 0.01ms !important;
+      }
+    }
+
+    .section {
+      margin-top: 18px;
+    }
+
+    .section:first-child {
+      margin-top: 0;
+    }
+
+    .section-heading {
+      display: flex;
+      align-items: baseline;
+      justify-content: space-between;
+      gap: 16px;
+      margin-bottom: 9px;
+    }
+
+    .section-heading h2,
+    .section-heading h3 {
+      margin: 0;
+      color: rgba(242, 234, 211, 0.68);
+      font-size: 10.5px;
+      font-weight: 800;
+      letter-spacing: 0.13em;
+      text-transform: uppercase;
+    }
+
+    .section-heading span {
+      color: var(--faint);
+      font-size: 10px;
+      text-align: right;
+    }
+
+    .hero-strip,
+    .callout,
+    .card,
+    .empty-state,
+    .list-row,
+    .metric-row,
+    .kanban-column {
+      min-width: 0;
+      border: 1px solid var(--border);
+      border-radius: var(--radius);
+      background: var(--surface);
+    }
+
+    .hero-strip {
+      padding: 18px 20px;
+      background: linear-gradient(135deg, var(--surface), var(--surface-3));
+      box-shadow: var(--shadow);
+    }
+
+    .hero-strip.crit,
+    .callout.crit,
+    .card.crit {
+      border-color: rgba(232, 106, 74, 0.44);
+      background: linear-gradient(135deg, rgba(232, 106, 74, 0.09), var(--surface));
+    }
+
+    .hero-strip.warn,
+    .callout.warn,
+    .card.warn {
+      border-color: rgba(240, 129, 58, 0.34);
+      background: linear-gradient(135deg, rgba(240, 129, 58, 0.07), var(--surface));
+    }
+
+    .hero-strip.ok,
+    .callout.ok,
+    .card.ok {
+      border-color: rgba(47, 163, 160, 0.36);
+      background: linear-gradient(135deg, rgba(47, 163, 160, 0.07), var(--surface));
+    }
+
+    .hero-strip h2 {
+      margin: 7px 0 5px;
+      font-size: clamp(17px, 2.2vw, 24px);
+      line-height: 1.3;
+    }
+
+    .hero-strip p,
+    .card p,
+    .callout p,
+    .empty-state p {
+      margin: 0;
+      color: var(--muted);
+      font-size: 12px;
+      line-height: 1.55;
+    }
+
+    .actions {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 8px;
+      margin-top: 13px;
+    }
+
+    .button {
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      min-height: 34px;
+      padding: 7px 13px;
+      border: 1px solid var(--border-strong);
+      border-radius: 8px;
+      background: transparent;
+      color: rgba(242, 234, 211, 0.74);
+      font-size: 11px;
+      font-weight: 750;
+      text-decoration: none;
+    }
+
+    button.button:not(:disabled) {
+      cursor: pointer;
+    }
+
+    .button.primary {
+      border-color: var(--warn);
+      background: var(--warn);
+      color: var(--base);
+    }
+
+    .button.safe {
+      border-color: rgba(47, 163, 160, 0.46);
+      background: rgba(47, 163, 160, 0.14);
+      color: var(--ok-light);
+    }
+
+    .button.danger {
+      border-color: rgba(232, 106, 74, 0.48);
+      background: rgba(232, 106, 74, 0.12);
+      color: #ff9d82;
+    }
+
+    .button:disabled {
+      cursor: not-allowed;
+      opacity: 0.48;
+    }
+
+    .card-grid,
+    .area-grid,
+    .project-grid,
+    .review-grid,
+    .split-grid {
+      display: grid;
+      gap: 12px;
+    }
+
+    .card-grid {
+      grid-template-columns: repeat(2, minmax(0, 1fr));
+    }
+
+    .area-grid {
+      grid-template-columns: repeat(3, minmax(0, 1fr));
+    }
+
+    .project-grid,
+    .split-grid {
+      grid-template-columns: repeat(2, minmax(0, 1fr));
+    }
+
+    .review-grid {
+      grid-template-columns: repeat(3, minmax(0, 1fr));
+    }
+
+    .card {
+      padding: 15px 16px;
+    }
+
+    .card-title-row {
+      display: flex;
+      align-items: flex-start;
+      justify-content: space-between;
+      gap: 12px;
+      margin-bottom: 9px;
+    }
+
+    .card h3,
+    .card h4 {
+      margin: 0;
+      font-size: 13px;
+      line-height: 1.35;
+    }
+
+    .card-subtitle {
+      display: block;
+      margin-top: 3px;
+      color: var(--faint);
+      font-size: 10.5px;
+    }
+
+    .pill,
+    .status-pill,
+    .privacy-lock {
+      padding: 4px 8px;
+      border: 1px solid var(--border);
+      color: var(--muted);
+    }
+
+    .status-pill[data-tone="ok"] {
+      border-color: rgba(47, 163, 160, 0.4);
+      background: rgba(47, 163, 160, 0.1);
+      color: var(--ok-light);
+    }
+
+    .status-pill[data-tone="warn"] {
+      border-color: rgba(240, 129, 58, 0.4);
+      background: rgba(240, 129, 58, 0.1);
+      color: var(--warn-light);
+    }
+
+    .status-pill[data-tone="crit"] {
+      border-color: rgba(232, 106, 74, 0.42);
+      background: rgba(232, 106, 74, 0.1);
+      color: #ff9d82;
+    }
+
+    .status-pill[data-tone="info"] {
+      border-color: rgba(143, 167, 232, 0.38);
+      background: rgba(143, 167, 232, 0.09);
+      color: var(--info);
+    }
+
+    .status-pill[data-tone="dim"] {
+      color: var(--faint);
+    }
+
+    .privacy-lock {
+      border-color: rgba(232, 106, 74, 0.35);
+      color: #ffad96;
+      text-transform: none;
+    }
+
+    .meta-list,
+    .simple-list,
+    .check-list {
+      display: grid;
+      gap: 7px;
+      margin: 0;
+      padding: 0;
+      list-style: none;
+    }
+
+    .meta-list li,
+    .simple-list li {
+      color: var(--muted);
+      font-size: 11.5px;
+      line-height: 1.45;
+    }
+
+    .meta-list strong {
+      color: rgba(242, 234, 211, 0.76);
+      font-weight: 700;
+    }
+
+    .simple-list li {
+      position: relative;
+      padding-left: 16px;
+    }
+
+    .simple-list li::before {
+      position: absolute;
+      left: 0;
+      color: var(--info);
+      content: "→";
+    }
+
+    .simple-list.ok li::before {
+      color: var(--ok-light);
+      content: "✓";
+    }
+
+    .simple-list.warn li::before {
+      color: var(--warn-light);
+      content: "!";
+    }
+
+    .list-row {
+      display: grid;
+      grid-template-columns: minmax(80px, auto) minmax(0, 1fr) auto;
+      gap: 12px;
+      align-items: center;
+      padding: 11px 13px;
+    }
+
+    .list-row + .list-row {
+      margin-top: 7px;
+    }
+
+    .list-row .mono,
+    .metric-value,
+    .column-count {
+      font-family: ui-monospace, "SFMono-Regular", Consolas, monospace;
+    }
+
+    .list-row-title {
+      overflow-wrap: anywhere;
+      font-size: 12px;
+      font-weight: 650;
+    }
+
+    .list-row-meta {
+      color: var(--faint);
+      font-size: 10px;
+      text-align: right;
+    }
+
+    .callout {
+      padding: 14px 16px;
+    }
+
+    .callout-title {
+      display: flex;
+      align-items: center;
+      gap: 9px;
+      margin-bottom: 5px;
+      font-size: 12px;
+      font-weight: 750;
+    }
+
+    .empty-state {
+      padding: 20px;
+      border-style: dashed;
+      background: var(--surface-2);
+      text-align: center;
+    }
+
+    .empty-state h3 {
+      margin: 0 0 5px;
+      font-size: 13px;
+    }
+
+    .empty-state .actions {
+      justify-content: center;
+    }
+
+    .metric-tabs {
+      display: flex;
+      gap: 7px;
+      overflow-x: auto;
+      padding-bottom: 4px;
+      scrollbar-width: thin;
+    }
+
+    .metric-tab {
+      flex: none;
+      padding: 7px 10px;
+      border: 1px solid var(--border);
+      border-radius: 999px;
+      background: var(--surface-2);
+      color: var(--muted);
+      font-size: 10px;
+      font-weight: 700;
+    }
+
+    .metric-tab.active {
+      border-color: rgba(240, 129, 58, 0.45);
+      background: rgba(240, 129, 58, 0.12);
+      color: var(--warn-light);
+    }
+
+    .metric-row {
+      display: grid;
+      grid-template-columns: minmax(130px, 1fr) minmax(160px, 1.3fr) auto;
+      gap: 16px;
+      align-items: center;
+      padding: 14px 16px;
+    }
+
+    .metric-name {
+      font-size: 12.5px;
+      font-weight: 750;
+    }
+
+    .metric-decision {
+      display: block;
+      margin-top: 4px;
+      color: var(--muted);
+      font-size: 10.5px;
+      line-height: 1.45;
+    }
+
+    .metric-value {
+      margin-bottom: 6px;
+      color: var(--warn-light);
+      font-size: 15px;
+      font-weight: 800;
+    }
+
+    .mini-track {
+      height: 6px;
+    }
+
+    .plan-list {
+      display: grid;
+      gap: 8px;
+    }
+
+    .plan-item {
+      display: grid;
+      grid-template-columns: auto 50px minmax(0, 1fr) auto;
+      gap: 11px;
+      align-items: center;
+      padding: 11px 13px;
+      border: 1px solid var(--border);
+      border-radius: var(--radius-small);
+      background: var(--surface);
+    }
+
+    .plan-item.protected {
+      border-style: dashed;
+      border-color: rgba(47, 163, 160, 0.52);
+    }
+
+    .plan-check {
+      display: grid;
+      width: 21px;
+      height: 21px;
+      place-items: center;
+      border: 1px solid var(--border-strong);
+      border-radius: 6px;
+      color: var(--base);
+      font-size: 12px;
+      font-weight: 900;
+    }
+
+    .plan-check.done {
+      border-color: var(--ok);
+      background: var(--ok);
+    }
+
+    .plan-time {
+      color: var(--muted);
+      font-family: ui-monospace, "SFMono-Regular", Consolas, monospace;
+      font-size: 11px;
+    }
+
+    .plan-copy {
+      min-width: 0;
+    }
+
+    .plan-title {
+      display: block;
+      overflow-wrap: anywhere;
+      font-size: 12px;
+      font-weight: 700;
+    }
+
+    .plan-meta {
+      display: block;
+      margin-top: 3px;
+      color: var(--faint);
+      font-size: 10px;
+      line-height: 1.4;
+    }
+
+    .tag-stack {
+      display: flex;
+      max-width: 170px;
+      flex-wrap: wrap;
+      justify-content: flex-end;
+      gap: 5px;
+    }
+
+    .area-card {
+      display: flex;
+      min-height: 220px;
+      flex-direction: column;
+    }
+
+    .area-icon {
+      display: inline-grid;
+      width: 30px;
+      height: 30px;
+      margin-right: 8px;
+      place-items: center;
+      border: 1px solid var(--border);
+      border-radius: 9px;
+      background: var(--surface-2);
+      color: var(--info);
+    }
+
+    .area-card .actions {
+      margin-top: auto;
+      padding-top: 12px;
+    }
+
+    .kanban-shell {
+      min-width: 0;
+      overflow: hidden;
+    }
+
+    .kanban-board {
+      display: grid;
+      grid-template-columns: repeat(12, minmax(190px, 1fr));
+      gap: 9px;
+      overflow-x: auto;
+      padding: 2px 2px 12px;
+      overscroll-behavior-inline: contain;
+    }
+
+    .kanban-column {
+      display: flex;
+      min-height: 270px;
+      flex-direction: column;
+      padding: 11px;
+    }
+
+    .kanban-column.paused {
+      border-color: rgba(242, 234, 211, 0.08);
+      background: #10121a;
+      filter: grayscale(1);
+      opacity: 0.62;
+    }
+
+    .kanban-column.review {
+      border-color: rgba(232, 106, 74, 0.34);
+    }
+
+    .column-head {
+      display: flex;
+      align-items: flex-start;
+      justify-content: space-between;
+      gap: 8px;
+      padding-bottom: 9px;
+      border-bottom: 1px solid var(--border);
+    }
+
+    .column-title {
+      font-size: 10.5px;
+      font-weight: 800;
+      line-height: 1.35;
+    }
+
+    .column-count {
+      color: var(--faint);
+      font-size: 10px;
+    }
+
+    .column-rule {
+      margin: 10px 0;
+      color: var(--faint);
+      font-size: 9.5px;
+      line-height: 1.45;
+    }
+
+    .column-empty {
+      margin-top: auto;
+      padding: 10px;
+      border: 1px dashed var(--border);
+      border-radius: 7px;
+      color: var(--faint);
+      font-size: 9.5px;
+      line-height: 1.45;
+    }
+
+    .check-list li {
+      display: flex;
+      gap: 9px;
+      align-items: flex-start;
+      color: var(--muted);
+      font-size: 11.5px;
+      line-height: 1.45;
+    }
+
+    .check-box {
+      display: inline-grid;
+      width: 17px;
+      height: 17px;
+      flex: none;
+      place-items: center;
+      border: 1px solid var(--border-strong);
+      border-radius: 5px;
+      color: var(--faint);
+    }
+
+    .integration-row {
+      display: grid;
+      grid-template-columns: minmax(150px, 1.3fr) auto repeat(3, minmax(96px, auto)) auto;
+      gap: 10px;
+      align-items: center;
+      padding: 12px 14px;
+      border: 1px solid var(--border);
+      border-radius: var(--radius-small);
+      background: var(--surface);
+    }
+
+    .integration-row + .integration-row {
+      margin-top: 7px;
+    }
+
+    .integration-name {
+      min-width: 0;
+      overflow-wrap: anywhere;
+      font-size: 12px;
+      font-weight: 700;
+    }
+
+    .integration-field {
+      color: var(--faint);
+      font-size: 9.5px;
+      line-height: 1.35;
+    }
+
+    .integration-field strong {
+      display: block;
+      margin-bottom: 2px;
+      color: var(--muted);
+      font-size: 9px;
+      letter-spacing: 0.06em;
+      text-transform: uppercase;
+    }
+
+    .switch {
+      position: relative;
+      width: 34px;
+      height: 19px;
+      border: 1px solid var(--border-strong);
+      border-radius: 999px;
+      background: rgba(242, 234, 211, 0.07);
+      opacity: 0.72;
+    }
+
+    .switch::after {
+      position: absolute;
+      top: 3px;
+      left: 3px;
+      width: 11px;
+      height: 11px;
+      border-radius: 50%;
+      background: var(--faint);
+      content: "";
+    }
+
+    .switch.on {
+      border-color: rgba(240, 129, 58, 0.45);
+      background: rgba(240, 129, 58, 0.18);
+    }
+
+    .switch.on::after {
+      left: 18px;
+      background: var(--warn);
+    }
+
+    .capture-panel {
+      display: flex;
+      flex-direction: column;
+      gap: 14px;
+      padding: 20px;
+      border-left: 1px solid var(--border);
+    }
+
+    .capture-head {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 12px;
+    }
+
+    .capture-close {
+      display: none;
+      width: 34px;
+      height: 34px;
+      border: 1px solid var(--border);
+      border-radius: 8px;
+      background: var(--surface-2);
+      cursor: pointer;
+    }
+
+    .capture-chips {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 6px;
+    }
+
+    .capture-chip {
+      padding: 5px 9px;
+      border: 1px solid var(--border-strong);
+      border-radius: 999px;
+      background: transparent;
+      color: var(--muted);
+      font-size: 9.5px;
+      font-weight: 750;
+      letter-spacing: 0.04em;
+      cursor: default;
+    }
+
+    .capture-chip:first-child {
+      border-color: rgba(240, 129, 58, 0.5);
+      background: rgba(240, 129, 58, 0.12);
+      color: var(--warn-light);
+    }
+
+    .capture-input-row {
+      display: flex;
+      gap: 8px;
+    }
+
+    .capture-input,
+    .search-input,
+    .filter-select {
+      min-width: 0;
+      border: 1px solid var(--border-strong);
+      border-radius: var(--radius-small);
+      background: var(--base);
+      color: var(--text);
+    }
+
+    .capture-input {
+      width: 100%;
+      padding: 10px 12px;
+      font-size: 11px;
+    }
+
+    .search-input,
+    .filter-select {
+      padding: 9px 11px;
+      color: var(--muted);
+      font-size: 11px;
+    }
+
+    .capture-help {
+      padding: 13px;
+      border: 1px dashed var(--border);
+      border-radius: var(--radius-small);
+      background: var(--surface-2);
+      color: var(--muted);
+      font-size: 10.5px;
+      line-height: 1.5;
+    }
+
+    .capture-rule {
+      margin-top: auto;
+      padding: 12px 13px;
+      border: 1px solid rgba(143, 167, 232, 0.26);
+      border-radius: var(--radius-small);
+      background: rgba(143, 167, 232, 0.06);
+      color: var(--muted);
+      font-size: 10.5px;
+      line-height: 1.5;
+    }
+
+    .mobile-tabs,
+    .mobile-overlay {
+      display: none;
+    }
+
+    .load-error {
+      padding: 18px;
+      border: 1px solid rgba(232, 106, 74, 0.45);
+      border-radius: var(--radius);
+      background: rgba(232, 106, 74, 0.1);
+      color: #ffb19c;
+      font-size: 12px;
+      line-height: 1.55;
+    }
+
+    @media (max-width: 1180px) {
+      :root {
+        --sidebar-width: 238px;
+        --capture-width: 300px;
+      }
+
+      .topbar {
+        grid-template-columns: minmax(0, 1fr) minmax(250px, 350px);
+      }
+
+      .area-grid {
+        grid-template-columns: repeat(2, minmax(0, 1fr));
+      }
+
+      .integration-row {
+        grid-template-columns: minmax(140px, 1fr) auto minmax(100px, auto) auto;
+      }
+
+      .integration-row .optional-field {
+        display: none;
+      }
+    }
+
+    @media (max-width: 900px) {
+      .app-shell {
+        display: block;
+        min-height: 100vh;
+      }
+
+      .sidebar {
+        position: fixed;
+        top: 0;
+        bottom: 0;
+        left: 0;
+        width: min(84vw, 300px);
+        height: 100dvh;
+        transform: translateX(-105%);
+        transition: transform 190ms ease;
+        box-shadow: var(--shadow);
+      }
+
+      .sidebar.open {
+        transform: translateX(0);
+      }
+
+      .capture-panel {
+        position: fixed;
+        right: 0;
+        bottom: 0;
+        left: 0;
+        top: auto;
+        width: 100%;
+        max-height: min(78dvh, 650px);
+        height: auto;
+        padding: 18px 18px calc(88px + env(safe-area-inset-bottom));
+        border-top: 1px solid var(--border-strong);
+        border-left: 0;
+        border-radius: 18px 18px 0 0;
+        transform: translateY(105%);
+        transition: transform 190ms ease;
+        box-shadow: 0 -24px 70px rgba(0, 0, 0, 0.5);
+      }
+
+      .capture-panel.open {
+        transform: translateY(0);
+      }
+
+      .capture-close,
+      .menu-button {
+        display: inline-flex;
+      }
+
+      .topbar {
+        grid-template-columns: 1fr;
+        gap: 11px;
+        padding: 12px 14px;
+      }
+
+      .header-status {
+        grid-template-columns: auto minmax(0, 1fr);
+      }
+
+      .page-content {
+        padding: 18px 14px 92px;
+      }
+
+      .mobile-overlay {
+        position: fixed;
+        inset: 0;
+        z-index: 18;
+        background: rgba(5, 7, 15, 0.68);
+        backdrop-filter: blur(3px);
+      }
+
+      .mobile-overlay.show {
+        display: block;
+      }
+
+      .mobile-tabs {
+        position: fixed;
+        right: 0;
+        bottom: 0;
+        left: 0;
+        z-index: 30;
+        display: grid;
+        grid-template-columns: repeat(4, minmax(0, 1fr));
+        gap: 4px;
+        padding: 8px 8px calc(8px + env(safe-area-inset-bottom));
+        border-top: 1px solid var(--border-strong);
+        background: rgba(7, 10, 22, 0.97);
+        backdrop-filter: blur(14px);
+      }
+
+      .mobile-tab {
+        display: grid;
+        min-width: 0;
+        min-height: 52px;
+        place-items: center;
+        gap: 3px;
+        padding: 5px 3px;
+        border: 0;
+        border-radius: 9px;
+        background: transparent;
+        color: var(--muted);
+        font-size: 9px;
+        cursor: pointer;
+      }
+
+      .mobile-tab.active {
+        background: rgba(240, 129, 58, 0.13);
+        color: var(--warn-light);
+      }
+
+      .mobile-tab-icon {
+        font-size: 15px;
+      }
+
+      .card-grid,
+      .project-grid,
+      .review-grid,
+      .split-grid,
+      .area-grid {
+        grid-template-columns: 1fr;
+      }
+
+      .metric-row {
+        grid-template-columns: 1fr;
+      }
+
+      .plan-item {
+        grid-template-columns: auto 46px minmax(0, 1fr);
+      }
+
+      .tag-stack {
+        grid-column: 1 / -1;
+        max-width: none;
+        justify-content: flex-start;
+        padding-left: 78px;
+      }
+
+      .kanban-board {
+        grid-template-columns: 1fr;
+        overflow-x: visible;
+      }
+
+      .kanban-column {
+        min-height: 180px;
+      }
+
+      .integration-row {
+        grid-template-columns: minmax(0, 1fr) auto;
+      }
+
+      .integration-field,
+      .integration-row .optional-field {
+        display: block;
+      }
+    }
+
+    @media (max-width: 560px) {
+      .topbar h1 {
+        font-size: 17px;
+      }
+
+      .topbar-subtitle {
+        display: none;
+      }
+
+      .capacity-meta {
+        font-size: 9px;
+      }
+
+      .section-heading {
+        align-items: flex-start;
+        flex-direction: column;
+        gap: 4px;
+      }
+
+      .section-heading span {
+        text-align: left;
+      }
+
+      .hero-strip,
+      .card,
+      .callout,
+      .empty-state {
+        padding: 14px;
+      }
+
+      .list-row {
+        grid-template-columns: 1fr;
+        gap: 5px;
+      }
+
+      .list-row-meta {
+        text-align: left;
+      }
+
+      .plan-item {
+        grid-template-columns: auto 44px minmax(0, 1fr);
+        gap: 8px;
+      }
+
+      .tag-stack {
+        padding-left: 73px;
+      }
+
+      .integration-row {
+        align-items: start;
+      }
+
+      .integration-field {
+        grid-column: 1 / -1;
+      }
+    }
+  </style>
+</head>
+<body>
+  <div class="app-shell">
+    <aside class="sidebar" id="sidebar" aria-label="Elsődleges navigáció">
+      <div class="brand">
+        <img src="./assets/loviverse-logo.png" alt="Loviverse">
+        <div class="brand-copy">
+          <span class="brand-title">LIFECORE OS</span>
+          <span class="brand-subtitle">Phase 1 · statikus prototípus</span>
+        </div>
+      </div>
+
+      <div class="sidebar-scroll">
+        <div class="nav-group">
+          <button class="nav-item" type="button" data-nav-page="command" aria-current="page">
+            <span class="nav-icon" aria-hidden="true">◉</span>
+            <span>Command Center</span>
+            <span class="nav-dot" data-nav-dot="command" hidden></span>
+          </button>
+        </div>
+
+        <div class="nav-group">
+          <div class="nav-label">IRÁNY</div>
+          <button class="nav-item" type="button" data-nav-page="goals">
+            <span class="nav-icon" aria-hidden="true">◇</span>
+            <span>Célok</span>
+            <span class="nav-dot" data-nav-dot="goals" hidden></span>
+          </button>
+          <button class="nav-item" type="button" data-nav-page="metrics">
+            <span class="nav-icon" aria-hidden="true">⌁</span>
+            <span>Metrikák</span>
+            <span class="nav-dot" data-nav-dot="metrics" hidden></span>
+          </button>
+        </div>
+
+        <div class="nav-group">
+          <div class="nav-label">MŰVELET</div>
+          <button class="nav-item" type="button" data-nav-page="daily">
+            <span class="nav-icon" aria-hidden="true">▤</span>
+            <span>Napi terv</span>
+            <span class="nav-dot" data-nav-dot="daily" hidden></span>
+          </button>
+          <button class="nav-item" type="button" data-nav-page="weekly">
+            <span class="nav-icon" aria-hidden="true">↻</span>
+            <span>Heti áttekintés</span>
+            <span class="nav-dot" data-nav-dot="weekly" hidden></span>
+          </button>
+          <button class="nav-item" type="button" data-nav-page="projects">
+            <span class="nav-icon" aria-hidden="true">▦</span>
+            <span>Projektek</span>
+            <span class="nav-dot" data-nav-dot="projects" hidden></span>
+          </button>
+          <button class="nav-item" type="button" data-nav-page="areas">
+            <span class="nav-icon" aria-hidden="true">✦</span>
+            <span>Életterületek</span>
+            <span class="nav-dot" data-nav-dot="areas" hidden></span>
+          </button>
+        </div>
+
+        <div class="nav-group">
+          <div class="nav-label">AGENT</div>
+          <button class="nav-item" type="button" data-nav-page="kanban">
+            <span class="nav-icon" aria-hidden="true">▥</span>
+            <span>Agent Kanban</span>
+            <span class="nav-dot" data-nav-dot="kanban" hidden></span>
+          </button>
+          <button class="nav-item" type="button" data-nav-page="outbox">
+            <span class="nav-icon" aria-hidden="true">⇥</span>
+            <span>Handoff / Kimenő</span>
+            <span class="nav-dot" data-nav-dot="outbox" hidden></span>
+          </button>
+        </div>
+
+        <div class="nav-group system-zone">
+          <div class="nav-label">RENDSZER</div>
+          <button class="nav-item" type="button" data-nav-page="reports">
+            <span class="nav-icon" aria-hidden="true">◫</span>
+            <span>Jelentések</span>
+            <span class="nav-dot" data-nav-dot="reports" hidden></span>
+          </button>
+          <button class="nav-item" type="button" data-nav-page="integrations">
+            <span class="nav-icon" aria-hidden="true">⌘</span>
+            <span>Integrációk</span>
+            <span class="nav-dot" data-nav-dot="integrations" hidden></span>
+          </button>
+          <button class="nav-item" type="button" data-nav-page="archive">
+            <span class="nav-icon" aria-hidden="true">▱</span>
+            <span>Archívum</span>
+            <span class="nav-dot" data-nav-dot="archive" hidden></span>
+          </button>
+        </div>
+      </div>
+
+      <div class="privacy-card">
+        <strong>ADATVÉDELEM · DEMO</strong>
+        <span>GREEN mintaadat. A rendszer javasol, vázol és jelez; kifelé nem ír.</span>
+      </div>
+    </aside>
+
+    <div class="main-shell">
+      <header class="topbar">
+        <div>
+          <div class="topbar-title-row">
+            <button class="menu-button" id="menuButton" type="button" aria-label="Navigáció megnyitása" aria-expanded="false">☰</button>
+            <h1 id="pageTitle">Command Center</h1>
+          </div>
+          <span class="topbar-subtitle">A rendszer javasol, te döntesz.</span>
+        </div>
+
+        <div class="header-status">
+          <span class="demo-badge">DEMO</span>
+          <div class="capacity-wrap">
+            <div class="capacity-meta">
+              <span>Kapacitás</span>
+              <span class="capacity-value" id="capacityValue">betöltés…</span>
+            </div>
+            <div class="capacity-track" id="capacityBar" role="progressbar" aria-label="Aktuális kapacitás" aria-valuemin="0" aria-valuemax="100" aria-valuenow="0">
+              <div class="capacity-fill" id="capacityFill" style="width: 0%"></div>
+            </div>
+          </div>
+        </div>
+      </header>
+
+      <main class="page-content" id="pageContent" tabindex="-1">
+        <div class="empty-state">
+          <h3>Adatmodul betöltése</h3>
+          <p>A Command Center a kanonikus demo-adatból épül.</p>
+        </div>
+      </main>
+    </div>
+
+    <aside class="capture-panel" id="capturePanel" aria-label="Gyors rögzítés">
+      <div class="capture-head">
+        <span class="eyebrow">GYORS RÖGZÍTÉS</span>
+        <button class="capture-close" id="captureClose" type="button" aria-label="Gyors rögzítés bezárása">✕</button>
+      </div>
+
+      <div class="capture-chips" aria-label="Rögzítési típusok">
+        <button class="capture-chip" type="button" aria-disabled="true">JEGYZET</button>
+        <button class="capture-chip" type="button" aria-disabled="true">FELADAT</button>
+        <button class="capture-chip" type="button" aria-disabled="true">ESEMÉNY</button>
+        <button class="capture-chip" type="button" aria-disabled="true">MÉRÉS</button>
+        <button class="capture-chip" type="button" aria-disabled="true">REFLEXIÓ</button>
+      </div>
+
+      <div class="capture-input-row">
+        <input class="capture-input" type="text" readonly aria-label="Gyors rögzítés szövege" placeholder="Phase 1 — vizuális rögzítési mező">
+        <button class="button primary" type="button" disabled>Rögzít</button>
+      </div>
+
+      <div class="capture-help">
+        A rögzítés ebben a fázisban nem perzisztens. Következő lépés: a triage és mentés csak jóváhagyott Phase 2 scope-ban aktiválható.
+      </div>
+
+      <div class="section-heading">
+        <h2>MA RÖGZÍTVE</h2>
+        <span>nincs Phase 1 állapot</span>
+      </div>
+
+      <div class="empty-state">
+        <h3>Nincs rögzített elem</h3>
+        <p>Válassz típust és adj meg szöveget; a mentés a következő fázis kapuja.</p>
+      </div>
+
+      <div class="capture-rule">
+        <strong>EMBERI JÓVÁHAGYÁS</strong><br>
+        A prototípus nem küld üzenetet, nem ír naptárat és nem módosít külső rendszert.
+      </div>
+    </aside>
+  </div>
+
+  <div class="mobile-overlay" id="mobileOverlay" aria-hidden="true"></div>
+
+  <nav class="mobile-tabs" aria-label="Mobil gyorsnavigáció">
+    <button class="mobile-tab active" type="button" data-mobile-page="command">
+      <span class="mobile-tab-icon" aria-hidden="true">◉</span>
+      <span>Központ</span>
+    </button>
+    <button class="mobile-tab" type="button" data-mobile-page="daily">
+      <span class="mobile-tab-icon" aria-hidden="true">▤</span>
+      <span>Napi terv</span>
+    </button>
+    <button class="mobile-tab" id="captureOpen" type="button">
+      <span class="mobile-tab-icon" aria-hidden="true">＋</span>
+      <span>Capture</span>
+    </button>
+    <button class="mobile-tab" type="button" data-mobile-page="kanban">
+      <span class="mobile-tab-icon" aria-hidden="true">▥</span>
+      <span>Kanban</span>
+    </button>
+  </nav>
+
+  <noscript>
+    <div class="load-error">A prototípus navigációjához JavaScript szükséges.</div>
+  </noscript>
+
+  <script type="module">
+    const PAGE_TITLES = {
+      command: "Command Center",
+      goals: "Célok",
+      metrics: "Metrikák",
+      daily: "Napi terv",
+      weekly: "Heti áttekintés",
+      projects: "Projektek",
+      areas: "Életterületek",
+      kanban: "Agent Kanban",
+      outbox: "Handoff / Kimenő",
+      reports: "Jelentések",
+      integrations: "Integrációk / Rendszerfeedek",
+      archive: "Archívum / Referencia"
+    };
+
+    const AREA_LABELS = {
+      finance: "Pénzügyek",
+      work: "Munka & Üzlet",
+      mind: "Mentális egészség",
+      body: "Fizikai jóllét",
+      rest: "Regeneráció",
+      learning: "Tanulás & önfejlesztés",
+      social: "Kapcsolatok",
+      time: "Idő & kapacitás",
+      purpose: "Motiváció & értelem"
+    };
+
+    const METRIC_CATEGORIES = [
+      "Haladás",
+      "Rendszer-egészség",
+      "Eredmény",
+      "Kapacitás",
+      "Privacy / Safety",
+      "Agent-átfutás",
+      "Cél-illeszkedés"
+    ];
+
+    const KANBAN_COLUMNS = [
+      ["Inbox", "Triage után cél-lánccal léphet tovább; cél nélkül a szabály szerinti Parked kapu érvényes."],
+      ["Needs Clarification", "A readiness-checklist bármely hiányzó eleme ide irányít."],
+      ["Ready for Brief", "Teljes checklist és jóváhagyott érzékenységi útvonal szükséges."],
+      ["With Codex", "Jóváhagyott brief és megfelelő érzékenységi besorolás szükséges."],
+      ["With Claude Code", "Jóváhagyott brief és megfelelő érzékenységi besorolás szükséges."],
+      ["With Claude Cowork", "Jóváhagyott brief és megfelelő érzékenységi besorolás szükséges."],
+      ["With Local Runtime", "Zárolt oszlop; reaktiválás csak külön Decision után."],
+      ["Waiting for User", "Döntésre, adatra, jóváhagyásra vagy kézi lépésre vár."],
+      ["Review Needed", "Completion reporttal visszaérkezett eredmény vár emberi review-ra."],
+      ["Accepted / Merged", "Elfogadott eredmény, rögzített validálással és completion reporttal."],
+      ["Parked", "Tudatos felfüggesztés, látható reaktiválási feltétellel."],
+      ["Archived", "Lezárt, csak olvasható referenciaállapot."]
+    ];
+
+    const READINESS_ITEMS = [
+      "goal-id — teljes goal-lánc",
+      "scope — egy mondatban",
+      "érzékenység — besorolva",
+      "elvárt output — formátum és hely",
+      "validálási kritérium",
+      "engedélyezett és tiltott fájlok",
+      "do-not-do lista"
+    ];
+
+    const pageContent = document.getElementById("pageContent");
+    const pageTitle = document.getElementById("pageTitle");
+    const sidebar = document.getElementById("sidebar");
+    const capturePanel = document.getElementById("capturePanel");
+    const mobileOverlay = document.getElementById("mobileOverlay");
+    const menuButton = document.getElementById("menuButton");
+    const captureOpen = document.getElementById("captureOpen");
+    const captureClose = document.getElementById("captureClose");
+    let currentPage = "command";
+    let data = null;
+
+    function element(tag, className, text) {
+      const item = document.createElement(tag);
+      if (className) item.className = className;
+      if (text !== undefined && text !== null) item.textContent = text;
+      return item;
+    }
+
+    function append(parent, ...children) {
+      children.flat().forEach((child) => {
+        if (child) parent.appendChild(child);
+      });
+      return parent;
+    }
+
+    function section(title, note) {
+      const wrap = element("section", "section");
+      const head = element("div", "section-heading");
+      append(head, element("h2", "", title));
+      if (note) append(head, element("span", "", note));
+      append(wrap, head);
+      return wrap;
+    }
+
+    function tonePill(text, tone) {
+      const pill = element("span", "status-pill", text);
+      pill.dataset.tone = tone || "dim";
+      return pill;
+    }
+
+    function privacyPill() {
+      return element("span", "privacy-lock", "🔒 RED-2 · csak jelzés");
+    }
+
+    function actionButton(text, variant, targetPage) {
+      const button = element("button", "button " + (variant || ""), text);
+      button.type = "button";
+      if (targetPage) {
+        button.dataset.jumpPage = targetPage;
+      } else {
+        button.disabled = true;
+        button.title = "Phase 1 — vizuális kapu";
+      }
+      return button;
+    }
+
+    function actions(...buttons) {
+      return append(element("div", "actions"), buttons);
+    }
+
+    function emptyState(title, body, actionLabel) {
+      const box = element("div", "empty-state");
+      append(box, element("h3", "", title), element("p", "", body));
+      if (actionLabel) append(box, actions(actionButton(actionLabel, "", null)));
+      return box;
+    }
+
+    function card(title, tone) {
+      const box = element("article", "card " + (tone || ""));
+      const row = element("div", "card-title-row");
+      append(row, element("h3", "", title));
+      append(box, row);
+      return { box, row };
+    }
+
+    function simpleList(items, tone) {
+      const list = element("ul", "simple-list " + (tone || ""));
+      items.forEach((item) => append(list, element("li", "", item)));
+      return list;
+    }
+
+    function metaList(items) {
+      const list = element("ul", "meta-list");
+      items.forEach((pair) => {
+        const li = element("li");
+        const strong = element("strong", "", pair[0] + ": ");
+        append(li, strong, document.createTextNode(pair[1]));
+        append(list, li);
+      });
+      return list;
+    }
+
+    function pageRoot(id) {
+      const root = element("div", "page");
+      root.dataset.page = id;
+      return root;
+    }
+
+    function severityRank(tone) {
+      return { crit: 3, warn: 2, ok: 1 }[tone] || 0;
+    }
+
+    function highestTone(tones) {
+      return tones.reduce((best, tone) => severityRank(tone) > severityRank(best) ? tone : best, "");
+    }
+
+    function setNavDot(page, tone) {
+      const dot = document.querySelector("[data-nav-dot='" + page + "']");
+      if (!dot) return;
+      if (["ok", "warn", "crit"].includes(tone)) {
+        dot.hidden = false;
+        dot.dataset.tone = tone;
+      } else {
+        dot.hidden = true;
+      }
+    }
+
+    function statusLabel(status) {
+      return {
+        ok: "rendben",
+        warn: "figyelendő",
+        crit: "döntést kér"
+      }[status] || "nincs mérés";
+    }
+
+    function ruleCard(rule) {
+      const item = card(rule.title, rule.sev);
+      item.row.appendChild(tonePill(rule.sev === "crit" ? "MAGAS" : rule.sev === "warn" ? "KÖZEPES" : "JELZÉS", rule.sev));
+      append(item.box, element("p", "", rule.body));
+      const trace = element("span", "card-subtitle", rule.rule);
+      append(item.box, trace);
+      if (rule.sev === "crit") {
+        append(item.box, actions(actionButton("Napi terv megnyitása", "danger", "daily")));
+      } else if (rule.needsApproval) {
+        append(item.box, actions(
+          actionButton("Elfogadom", "safe", null),
+          actionButton("Nem ma", "", null)
+        ));
+      }
+      return item.box;
+    }
+
+    function renderCommand() {
+      const root = pageRoot("command");
+      const focus = data.DAY_PLAN.find((item) => !item.done && item.tag === "P1") || data.DAY_PLAN[0];
+      const critical = data.rules.filter((item) => item.sev === "crit");
+      const approvals = data.rules.filter((item) => item.needsApproval);
+      const deadlineSignals = data.rules.filter((item) => item.id === "FIN_CAL");
+      const incoming = data.rules.filter((item) => item.sev === "info");
+
+      if (critical.length) {
+        const criticalSection = section("AKCIÓT KÉRŐ JELZÉS", "a súlyosság döntést, nem bűntudatot jelez");
+        critical.forEach((item) => append(criticalSection, ruleCard(item)));
+        append(root, criticalSection);
+      }
+
+      const one = element("section", "hero-strip warn");
+      append(
+        one,
+        element("span", "eyebrow", "THE ONE THING"),
+        element("h2", "", focus.title),
+        element("p", "", focus.time + " · " + focus.meta),
+        actions(actionButton("Napi terv megnyitása", "primary", "daily"))
+      );
+      append(root, one);
+
+      const overview = section("NAPI ÁTTEKINTÉS", "kanonikus demo-adatból");
+      const grid = element("div", "card-grid");
+
+      const plan = card("Mai terv");
+      append(plan.box, simpleList(data.DAY_PLAN.slice(0, 3).map((item) => item.time + " · " + item.title), "ok"));
+      append(plan.box, actions(actionButton("Teljes napi terv", "", "daily")));
+
+      const approval = card("Jóváhagyásra váró javaslatok", approvals.some((item) => item.sev === "warn") ? "warn" : "");
+      if (approvals.length) {
+        append(approval.box, simpleList(approvals.map((item) => item.title), "warn"));
+        append(approval.box, actions(actionButton("Jóváhagyási kapu", "safe", null)));
+      } else {
+        append(approval.box, emptyState("Nincs jóváhagyásra váró javaslat", "Következő lépés: ellenőrizd a heti fókuszt.", null));
+      }
+
+      const deadlineCard = card("Határidők", deadlineSignals.length ? "warn" : "");
+      if (deadlineSignals.length) {
+        append(deadlineCard.box, simpleList(deadlineSignals.map((item) => item.title), "warn"));
+        append(deadlineCard.box, actions(actionButton("Terv ellenőrzése", "", "daily")));
+      } else {
+        append(deadlineCard.box, emptyState("Minden csendes", "Következő lépés: tartsd láthatóan a heti fókuszt.", null));
+      }
+
+      const feeds = card("Beérkező jelzések");
+      const feedItems = data.FEEDS.map((item) => item.name + (item.badge ? " · " + item.badge : ""));
+      append(feeds.box, simpleList(feedItems.concat(incoming.map((item) => item.title))));
+      append(feeds.box, actions(actionButton("Integrációk megnyitása", "", "integrations")));
+
+      append(grid, plan.box, approval.box, deadlineCard.box, feeds.box);
+      append(overview, grid);
+      append(root, overview);
+
+      const healthSection = section("RENDSZER-EGÉSZSÉG", "a korábbi command entitás rendszer-vetülete");
+      const health = card("Rendszer-egészség", data.SYSTEM_HEALTH.tone);
+      health.row.appendChild(tonePill(data.SYSTEM_HEALTH.tone === "ok" ? "CURRENT" : "ELLENŐRIZENDŐ", data.SYSTEM_HEALTH.tone));
+      append(health.box, element("p", "", data.SYSTEM_HEALTH.note));
+      append(health.box, actions(actionButton("Forrás ellenőrzése", "", "integrations")));
+      append(healthSection, health.box);
+      append(root, healthSection);
+      return root;
+    }
+
+    function renderGoals() {
+      const root = pageRoot("goals");
+      const north = element("section", "hero-strip");
+      append(
+        north,
+        element("span", "eyebrow", "NORTH STAR"),
+        element("h2", "", "Nincs demo-adat"),
+        element("p", "", "A North Star nem szerkeszthető inline; módosítása rögzített Decision-folyamatot nyit."),
+        actions(actionButton("Decision szükséges", "", null))
+      );
+      append(root, north);
+
+      const groups = section("CÉLSZINTEK", "kapacitásplafon minden szinten");
+      const grid = element("div", "card-grid");
+      ["Strategic", "Quarterly", "Life Area", "Workstream"].forEach((label) => {
+        const item = card(label);
+        item.row.appendChild(tonePill("keret · nincs demo-adat", "dim"));
+        append(
+          item.box,
+          emptyState(
+            "Még nincs cél",
+            "Következő lépés: indítsd el a goal-sablont, és add meg a Definition of Done mezőt.",
+            "Goal-sablon megnyitása"
+          )
+        );
+        append(grid, item.box);
+      });
+      append(groups, grid);
+      append(root, groups);
+
+      const gateSection = section("VIZUÁLIS KAPUK", "Phase 1 — logika nélkül");
+      const gate = element("div", "callout warn");
+      append(
+        gate,
+        element("div", "callout-title", "No Definition of Done, No Build"),
+        element("p", "", "DoD nélkül a cél draft marad, és build-blokk nem ütemezhető rá."),
+        actions(actionButton("Build-blokk zárolva", "", null))
+      );
+      append(gateSection, gate);
+      append(root, gateSection);
+      return root;
+    }
+
+    function renderMetrics() {
+      const root = pageRoot("metrics");
+      const tabsSection = section("METRIKA-KATEGÓRIÁK", "7 kanonikus kategória");
+      const tabs = element("div", "metric-tabs");
+      METRIC_CATEGORIES.forEach((label) => {
+        const tab = element("span", "metric-tab" + (label === "Kapacitás" ? " active" : ""), label);
+        tab.setAttribute("role", "tab");
+        tab.setAttribute("aria-selected", label === "Kapacitás" ? "true" : "false");
+        append(tabs, tab);
+      });
+      append(tabsSection, tabs);
+      append(root, tabsSection);
+
+      const current = section("KAPACITÁS", "definiált számítás · demo bemenet");
+      const metric = element("div", "metric-row");
+      const nameBox = element("div");
+      append(
+        nameBox,
+        element("div", "metric-name", "Napi kapacitás"),
+        element("span", "metric-decision", data.sleepRule ? data.sleepRule.title : "A döntési szabály nem érhető el.")
+      );
+      const valueBox = element("div");
+      append(
+        valueBox,
+        element("div", "metric-value", data.cap + "%"),
+        append(element("div", "mini-track"), (() => {
+          const fill = element("div", "mini-fill");
+          fill.style.width = data.cap + "%";
+          return fill;
+        })())
+      );
+      append(metric, nameBox, valueBox, tonePill(data.capTone === "crit" ? "CRIT" : data.capTone === "warn" ? "WARN" : "OK", data.capTone));
+      append(current, metric);
+      append(root, current);
+
+      const empty = section("MÉG NINCS ÉLESÍTETT METRIKA", "a többi kategóriában nincs demo-entitás");
+      const gate = card("Befogadási kapu");
+      append(gate.box, simpleList([
+        "Számítás — pontos képlet vagy származtatási szabály",
+        "Forrás — feed vagy entitás",
+        "Küszöb — ok / warn / crit sáv",
+        "Döntési szabály — rossz jelhez konkrét teendő"
+      ], "ok"));
+      append(gate.box, actions(actionButton("Metrika élesítése zárolva", "", null)));
+      append(empty, gate.box);
+      append(root, empty);
+      return root;
+    }
+
+    function renderDaily() {
+      const root = pageRoot("daily");
+      const banner = element("section", "hero-strip warn");
+      append(
+        banner,
+        element("span", "eyebrow", "KAPACITÁS-ÚJRAMÉRETEZÉS"),
+        element("h2", "", data.cap + "% — alvásadósság"),
+        element("p", "", data.sleepRule ? data.sleepRule.body : "A kapacitási szabály demo-bemeneten fut."),
+        actions(
+          actionButton("Elfogadás · Phase 2", "safe", null),
+          actionButton("Felülbírálás · Decision", "", null)
+        )
+      );
+      append(root, banner);
+
+      const planSection = section("MA TERVE", "idősávos blokkok · statikus Phase 1");
+      const planList = element("div", "plan-list");
+      data.DAY_PLAN.forEach((item) => {
+        const row = element("article", "plan-item" + (item.tag === "VÉDETT" ? " protected" : ""));
+        const check = element("span", "plan-check" + (item.done ? " done" : ""), item.done ? "✓" : "");
+        check.setAttribute("aria-label", item.done ? "Teljesített blokk" : "Nem teljesített blokk");
+        const copy = element("div", "plan-copy");
+        append(copy, element("span", "plan-title", item.title), element("span", "plan-meta", item.meta));
+        const tags = element("div", "tag-stack");
+        append(tags, tonePill(item.tag, item.tone));
+        const linkedProject = data.PROJECTS.find((project) => item.title.includes(project.name));
+        append(tags, tonePill(linkedProject ? "Projekt · " + linkedProject.name : "Célkapcsolat · nincs demo-adat", "dim"));
+        append(tags, tonePill("Energiahatás · " + item.energyImpact + "%", item.energyImpact > 0 ? "ok" : item.energyImpact < 0 ? "warn" : "dim"));
+        append(row, check, element("span", "plan-time", item.time), copy, tags);
+        append(planList, row);
+      });
+      append(planSection, planList);
+      append(root, planSection);
+
+      const addSection = section("KÉZI BLOKK", "vizuális affordance");
+      append(addSection, emptyState(
+        "A terv a heti áttekintésből és a szabálymotorból épül",
+        "Következő lépés: kézi blokk csak goal- vagy projektkapcsolattal adható hozzá.",
+        "Blokk hozzáadása"
+      ));
+      append(root, addSection);
+      return root;
+    }
+
+    function reviewColumn(title, items, tone) {
+      const item = card(title, tone);
+      append(item.box, simpleList(items, tone === "ok" ? "ok" : tone === "warn" ? "warn" : ""));
+      return item.box;
+    }
+
+    function renderWeekly() {
+      const root = pageRoot("weekly");
+      const reviewSection = section("HETI KERET", "demo bemenetből számolt előnézet");
+      const grid = element("div", "review-grid");
+      append(
+        grid,
+        reviewColumn("Győzelmek", data.review.wins, "ok"),
+        reviewColumn("Hiányok", data.review.gaps, "warn"),
+        reviewColumn("Jövő heti keret", data.review.nextWeek, "")
+      );
+      append(reviewSection, grid);
+      append(root, reviewSection);
+
+      const triage = section("CÉL-TRIAGE", "halad · akad · reframe-gyanú");
+      append(triage, emptyState(
+        "Nincs Goal demo-entitás",
+        "Következő lépés: az aktív célokat a lezárás előtt kötelező végigtriázsolni.",
+        "Triage indítása"
+      ));
+      append(root, triage);
+
+      const stuck = section("BERAGADT KÁRTYÁK", "AgentJob demo-entitás nélkül");
+      const stuckGrid = element("div", "split-grid");
+      append(
+        stuckGrid,
+        emptyState("Waiting for User", "Következő lépés: a felhasználói döntésre váró kártyákat itt kell feloldani.", "Lista megnyitása"),
+        emptyState("Review Needed", "Következő lépés: a review-sor lezárása megelőzi az új handoffot.", "Review-sor megnyitása")
+      );
+      append(stuck, stuckGrid);
+      append(root, stuck);
+
+      const closeSection = section("LEZÁRÁSI KAPU", "nincs csendes újrakeretezés");
+      const closeGate = element("div", "callout warn");
+      append(
+        closeGate,
+        element("div", "callout-title", "A lezárás Review-entitást írna"),
+        element("p", "", "Phase 1-ben ez csak vizuális kapu. Decision nélküli célmódosítás esetén a lezárás blokkolt."),
+        actions(actionButton("Áttekintés lezárása", "primary", null))
+      );
+      append(closeSection, closeGate);
+      append(root, closeSection);
+      return root;
+    }
+
+    function renderProjects() {
+      const root = pageRoot("projects");
+      const active = section("AKTÍV PROJEKTEK", "Parked alapból rejtve");
+      const grid = element("div", "project-grid");
+      data.PROJECTS.forEach((project) => {
+        const item = card(project.name, project.dot === "crit" ? "crit" : project.dot === "warn" ? "warn" : "");
+        item.box.dataset.projectId = project.id;
+        item.row.appendChild(tonePill(project.zone, project.dot));
+        append(item.box, metaList([
+          ["Goal-morzsa", project.goalId || "Inbox · nincs goal-id"],
+          ["Életterület", AREA_LABELS[project.lifeAreaId] || project.lifeAreaId],
+          ["Blokkoló", project.badge || "nincs demo-adat"],
+          ["Utolsó mozgás", "nincs demo-adat"]
+        ]));
+        if (!project.goalId) {
+          const gate = element("div", "callout warn");
+          append(
+            gate,
+            element("div", "callout-title", "No Goal, No Project"),
+            element("p", "", "A cél nélküli Inbox-projekt a szabály szerinti kapun belül goal-id-t kap vagy Parked állapotba kerül."),
+            actions(actionButton("Cél hozzárendelése", "", "goals"))
+          );
+          append(item.box, gate);
+        }
+        append(grid, item.box);
+      });
+      append(active, grid);
+      append(root, active);
+
+      const parked = section("PARKED SZŰRŐ", "alapból rejtett tartalom");
+      append(parked, emptyState(
+        "Nincs Parked demo-entitás",
+        "Következő lépés: csak reaktiválási feltétellel rendelkező projekt jelenhet meg itt.",
+        "Parked szűrő"
+      ));
+      append(root, parked);
+      return root;
+    }
+
+    function renderAreas() {
+      const root = pageRoot("areas");
+      const areaSection = section("9 ÉLETTERÜLET", "definiált jelből származtatott státusz");
+      const grid = element("div", "area-grid");
+      const sensitiveIds = new Set(["mind", "body", "social", "finance"]);
+
+      data.LIFE_AREAS.forEach((area) => {
+        const state = data.areaStatus(area.id, data.SIGNALS);
+        const item = card("", state || "");
+        item.box.classList.add("area-card");
+        item.box.dataset.areaId = area.id;
+        item.row.replaceChildren();
+
+        const titleWrap = element("div");
+        const titleLine = element("div");
+        append(titleLine, element("span", "area-icon", area.icon), element("strong", "", AREA_LABELS[area.id] || area.name));
+        append(titleWrap, titleLine, element("span", "card-subtitle", "trend · nincs demo-adat"));
+        append(item.row, titleWrap, tonePill(statusLabel(state), state || "dim"));
+
+        if (sensitiveIds.has(area.id)) {
+          append(item.box, privacyPill());
+        }
+
+        append(item.box, metaList([
+          ["Aktív cél", "nincs demo-adat"],
+          ["Aktív agent-munka", "nincs demo-adat"],
+          ["Feed-forrás", data.FEEDS.some((feed) => feed.areaId === area.id) ? data.FEEDS.filter((feed) => feed.areaId === area.id).map((feed) => feed.name).join(", ") : "nincs hozzárendelt demo-feed"]
+        ]));
+
+        if (state === "crit") {
+          const relatedRule = data.rules.find((rule) => rule.domainId === area.id && rule.sev === "crit");
+          const critCallout = element("div", "callout crit");
+          append(
+            critCallout,
+            element("div", "callout-title", relatedRule ? relatedRule.title : "A jel döntést kér"),
+            element("p", "", relatedRule ? relatedRule.body : "A kapcsolódó metrika döntési szabálya szükséges."),
+            actions(actionButton("Döntési szabály", "danger", null))
+          );
+          append(item.box, critCallout);
+        } else {
+          append(item.box, actions(actionButton("Részlet · Phase 2", "", null)));
+        }
+        append(grid, item.box);
+      });
+
+      append(areaSection, grid);
+      append(root, areaSection);
+      return root;
+    }
+
+    function renderKanban() {
+      const root = pageRoot("kanban");
+      const controls = element("div", "callout");
+      append(
+        controls,
+        element("div", "callout-title", "WIP-kapu"),
+        element("p", "", "Review Needed ≤ 3. A limit felett az új agent-handoff vizuálisan zárolt."),
+        actions(actionButton("Új handoff zárolva", "", null))
+      );
+      append(root, controls);
+
+      const boardSection = section("12 OSZLOP", "belépési feltételek · drag-and-drop nélkül");
+      const boardShell = element("div", "kanban-shell");
+      const board = element("div", "kanban-board");
+      board.setAttribute("aria-label", "Agent Kanban oszlopok");
+
+      KANBAN_COLUMNS.forEach((definition, index) => {
+        const name = definition[0];
+        const isPaused = name === "With Local Runtime";
+        const isReview = name === "Review Needed";
+        const column = element("section", "kanban-column" + (isPaused ? " paused" : "") + (isReview ? " review" : ""));
+        column.dataset.kanbanColumn = String(index + 1);
+        if (isPaused) {
+          column.dataset.runtimeState = "paused";
+          column.setAttribute("aria-disabled", "true");
+        }
+        const head = element("div", "column-head");
+        const titleBox = element("div");
+        append(titleBox, element("div", "column-title", name));
+        if (isPaused) append(titleBox, tonePill("PAUSED", "dim"));
+        if (isReview) append(titleBox, tonePill("WIP ≤ 3", "crit"));
+        append(head, titleBox, element("span", "column-count", "—"));
+        append(
+          column,
+          head,
+          element("p", "column-rule", definition[1]),
+          element("div", "column-empty", "Nincs AgentJob demo-adat. Következő lépés: a belépési feltétel teljesítése.")
+        );
+        append(board, column);
+      });
+
+      append(boardShell, board);
+      append(boardSection, boardShell);
+      append(root, boardSection);
+      return root;
+    }
+
+    function renderOutbox() {
+      const root = pageRoot("outbox");
+      const lists = section("KIMENŐ ÁLLAPOTOK", "draft-only elv");
+      const grid = element("div", "split-grid");
+      append(
+        grid,
+        emptyState("Jóváhagyásra vár", "Nincs Handoff demo-entitás. Következő lépés: készíts teljes readiness-checklistet.", "Draft brief előkészítése"),
+        emptyState("Kiküldve", "Nincs kiküldött demo-entitás. A rendszer sosem küld magától.", null)
+      );
+      append(lists, grid);
+      append(root, lists);
+
+      const readiness = section("READINESS-CHECKLIST", "mind a 7 pont kötelező");
+      const checklistCard = card("Brief kapu");
+      const checklist = element("ul", "check-list");
+      READINESS_ITEMS.forEach((label) => {
+        append(checklist, append(element("li"), element("span", "check-box", "□"), document.createTextNode(label)));
+      });
+      append(checklistCard.box, checklist);
+      const sensitivity = element("div", "callout crit");
+      append(
+        sensitivity,
+        element("div", "callout-title", "Érzékenység: nincs besorolva"),
+        element("p", "", "No Agent Handoff without Sensitivity Review — hiányos mezőnél a kiadás blokkolt."),
+        actions(actionButton("Küldés / Kiadás", "danger", null))
+      );
+      append(checklistCard.box, sensitivity);
+      append(readiness, checklistCard.box);
+      append(root, readiness);
+      return root;
+    }
+
+    function renderReports() {
+      const root = pageRoot("reports");
+      const controls = element("section", "hero-strip");
+      const controlRow = element("div", "actions");
+      const filter = element("select", "filter-select");
+      filter.disabled = true;
+      filter.setAttribute("aria-label", "Riport kategória");
+      const option = element("option", "", "Kategóriaszűrő · nincs demo-adat");
+      append(filter, option);
+      append(
+        controls,
+        element("span", "eyebrow", "OLVASÓ MÓD"),
+        element("h2", "", "Heti és havi riportok"),
+        element("p", "", "A RED-2 forrású riport csak sáv- vagy összegzés-szinten jelenhet meg; a forrás-freshness mindig látható."),
+        append(controlRow, filter, tonePill("forrás-freshness · nincs demo-adat", "dim"))
+      );
+      append(root, controls);
+
+      const reportList = section("RIPORT-LISTA", "nincs Report demo-entitás");
+      append(reportList, emptyState(
+        "Az első heti riport a következő heti áttekintés lezárásakor készül",
+        "Következő lépés: zárd le a heti áttekintést, majd ellenőrizd a forrás-freshness állapotát.",
+        "Heti áttekintés megnyitása"
+      ));
+      const jump = reportList.querySelector(".button");
+      if (jump) {
+        jump.disabled = false;
+        jump.dataset.jumpPage = "weekly";
+      }
+      append(root, reportList);
+      return root;
+    }
+
+    function integrationField(label, value, optional) {
+      const box = element("div", "integration-field" + (optional ? " optional-field" : ""));
+      append(box, element("strong", "", label), document.createTextNode(value));
+      return box;
+    }
+
+    function renderIntegrations() {
+      const root = pageRoot("integrations");
+      const policy = element("div", "callout");
+      append(
+        policy,
+        element("div", "callout-title", "Freshness- és kimenet-ellenőrzési kapu"),
+        element("p", "", "STALE kulcs-feed esetén a sor szürkül, és a frissítsd a forrást akció válik elsődlegessé. Kimenet nélküli futás külön crit állapot.")
+      );
+      append(root, policy);
+
+      const feedSection = section("RENDSZERFEEDEK", "FEEDS kanonikus export");
+      data.FEEDS.forEach((feed) => {
+        const row = element("article", "integration-row");
+        row.dataset.feedId = feed.id;
+        append(
+          row,
+          element("div", "integration-name", feed.name),
+          tonePill("DEMO" + (feed.badge ? " · " + feed.badge : ""), feed.dot),
+          integrationField("Freshness", "nincs demo-adat", false),
+          integrationField("Utolsó szinkron", "nincs demo-adat", true),
+          integrationField("Kimenet", "nincs demo-adat", true),
+          integrationField("Kapcsoló", "nincs demo-adat", false)
+        );
+        append(feedSection, row);
+      });
+      append(root, feedSection);
+
+      const integrationSection = section("INTEGRÁCIÓK", "INTEGRATIONS kanonikus export");
+      data.INTEGRATIONS.forEach((integration) => {
+        const row = element("article", "integration-row");
+        row.dataset.integrationName = integration.name;
+        const toggle = element("span", "switch" + (integration.on ? " on" : ""));
+        toggle.setAttribute("role", "switch");
+        toggle.setAttribute("aria-checked", integration.on ? "true" : "false");
+        toggle.setAttribute("aria-disabled", "true");
+        append(
+          row,
+          element("div", "integration-name", integration.name),
+          tonePill(integration.status, integration.on ? "warn" : "dim"),
+          integrationField("Freshness", "nincs demo-adat", false),
+          integrationField("Utolsó szinkron", "nincs demo-adat", true),
+          integrationField("Kimenet", "nincs demo-adat", true),
+          toggle
+        );
+        append(integrationSection, row);
+      });
+      append(root, integrationSection);
+      return root;
+    }
+
+    function renderArchive() {
+      const root = pageRoot("archive");
+      const search = element("section", "hero-strip");
+      const input = element("input", "search-input");
+      input.type = "search";
+      input.readOnly = true;
+      input.placeholder = "Keresés az archívumban — Phase 1 vizuális";
+      input.setAttribute("aria-label", "Keresés az archívumban");
+      append(
+        search,
+        element("span", "eyebrow", "CSAK OLVASHATÓ"),
+        element("h2", "", "Archívum = referencia"),
+        element("p", "", "Nincs szerkesztés. A reaktiválás rögzített Decision-folyamatot nyit."),
+        actions(input, actionButton("Reaktiválás · Decision", "", null))
+      );
+      append(root, search);
+
+      const archiveList = section("ARCHIVEITEM-LISTA", "nincs ArchiveItem demo-entitás");
+      append(archiveList, emptyState(
+        "Az archívum a lezárt munkák emlékezete",
+        "Következő lépés: az első Completed céllal vagy projekttel kezd épülni.",
+        null
+      ));
+      append(root, archiveList);
+      return root;
+    }
+
+    const renderers = {
+      command: renderCommand,
+      goals: renderGoals,
+      metrics: renderMetrics,
+      daily: renderDaily,
+      weekly: renderWeekly,
+      projects: renderProjects,
+      areas: renderAreas,
+      kanban: renderKanban,
+      outbox: renderOutbox,
+      reports: renderReports,
+      integrations: renderIntegrations,
+      archive: renderArchive
+    };
+
+    function closePanels() {
+      sidebar.classList.remove("open");
+      capturePanel.classList.remove("open");
+      mobileOverlay.classList.remove("show");
+      mobileOverlay.setAttribute("aria-hidden", "true");
+      menuButton.setAttribute("aria-expanded", "false");
+    }
+
+    function navigate(page, focusMain) {
+      if (!data || !renderers[page]) return;
+      currentPage = page;
+      pageTitle.textContent = PAGE_TITLES[page];
+      document.title = "LifeCore OS — " + PAGE_TITLES[page];
+      document.querySelectorAll("[data-nav-page]").forEach((item) => {
+        item.setAttribute("aria-current", item.dataset.navPage === page ? "page" : "false");
+      });
+      document.querySelectorAll("[data-mobile-page]").forEach((item) => {
+        item.classList.toggle("active", item.dataset.mobilePage === page);
+      });
+      pageContent.replaceChildren(renderers[page]());
+      history.replaceState(null, "", "#" + page);
+      closePanels();
+      window.scrollTo({ top: 0, behavior: "auto" });
+      if (focusMain) pageContent.focus({ preventScroll: true });
+    }
+
+    document.addEventListener("click", (event) => {
+      const nav = event.target.closest("[data-nav-page]");
+      const mobileNav = event.target.closest("[data-mobile-page]");
+      const jump = event.target.closest("[data-jump-page]");
+      if (nav) navigate(nav.dataset.navPage, true);
+      if (mobileNav) navigate(mobileNav.dataset.mobilePage, true);
+      if (jump) navigate(jump.dataset.jumpPage, true);
+    });
+
+    menuButton.addEventListener("click", () => {
+      const willOpen = !sidebar.classList.contains("open");
+      closePanels();
+      sidebar.classList.toggle("open", willOpen);
+      mobileOverlay.classList.toggle("show", willOpen);
+      mobileOverlay.setAttribute("aria-hidden", willOpen ? "false" : "true");
+      menuButton.setAttribute("aria-expanded", willOpen ? "true" : "false");
+    });
+
+    captureOpen.addEventListener("click", () => {
+      closePanels();
+      capturePanel.classList.add("open");
+      mobileOverlay.classList.add("show");
+      mobileOverlay.setAttribute("aria-hidden", "false");
+    });
+
+    captureClose.addEventListener("click", closePanels);
+    mobileOverlay.addEventListener("click", closePanels);
+
+    import("./lifecore-data.js").then((module) => {
+      const {
+        LIFE_AREAS,
+        SYSTEM_HEALTH,
+        PROJECTS,
+        FEEDS,
+        DAY_PLAN,
+        SIGNALS,
+        runRules,
+        capacity,
+        areaStatus,
+        weeklyReview,
+        INTEGRATIONS
+      } = module;
+
+      const rules = runRules(SIGNALS);
+      const cap = capacity(SIGNALS);
+      const capTone = cap < 60 ? "crit" : cap < 70 ? "warn" : "ok";
+
+      data = {
+        LIFE_AREAS,
+        SYSTEM_HEALTH,
+        PROJECTS,
+        FEEDS,
+        DAY_PLAN,
+        SIGNALS,
+        INTEGRATIONS,
+        rules,
+        cap,
+        capTone,
+        areaStatus,
+        review: weeklyReview(SIGNALS),
+        sleepRule: rules.find((item) => item.id === "SLEEP_LOAD")
+      };
+
+      document.getElementById("capacityValue").textContent = cap + "% — alvásadósság";
+      document.getElementById("capacityFill").style.width = cap + "%";
+      document.getElementById("capacityBar").setAttribute("aria-valuenow", String(cap));
+
+      setNavDot("command", highestTone(rules.map((item) => item.sev)));
+      setNavDot("metrics", capTone);
+      setNavDot("daily", capTone);
+      setNavDot("weekly", data.review.gaps.length ? "warn" : "ok");
+      setNavDot("projects", highestTone(PROJECTS.map((item) => item.dot)));
+      setNavDot("areas", highestTone(LIFE_AREAS.map((area) => areaStatus(area.id, SIGNALS))));
+      setNavDot("integrations", highestTone(FEEDS.map((item) => item.dot)));
+
+      window.__LIFECORE_SMOKE__ = {
+        ready: true,
+        pageCount: Object.keys(PAGE_TITLES).length,
+        areaCount: LIFE_AREAS.length,
+        kanbanColumnCount: KANBAN_COLUMNS.length,
+        capacity: cap
+      };
+
+      const requested = location.hash.slice(1);
+      navigate(renderers[requested] ? requested : "command", false);
+    }).catch((error) => {
+      const box = element("div", "load-error");
+      append(
+        box,
+        element("strong", "", "A demo-adatmodul nem tölthető be."),
+        document.createTextNode(" A böngésző biztonsági szabálya közvetlen fájlmegnyitásnál blokkolhatja az ES modult. Indíts helyi HTTP-kiszolgálót, majd töltsd újra az oldalt. Technikai részlet: " + error.message)
+      );
+      pageContent.replaceChildren(box);
+      document.getElementById("capacityValue").textContent = "modulhiba";
+    });
+  </script>
+</body>
+</html>
