@@ -448,7 +448,7 @@
     .empty-state,
     .list-row,
     .metric-row,
-    .kanban-column {
+    .kanban-group {
       min-width: 0;
       border: 1px solid var(--border);
       border-radius: var(--radius);
@@ -897,34 +897,34 @@
 
     .kanban-shell {
       min-width: 0;
-      overflow: hidden;
+      overflow: visible;
+    }
+
+    .kanban-toolbar {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 8px;
+      margin-bottom: 14px;
+    }
+
+    .kanban-filter.active {
+      border-color: rgba(240, 129, 58, 0.45);
+      background: rgba(240, 129, 58, 0.12);
+      color: var(--text);
     }
 
     .kanban-board {
       display: grid;
-      grid-template-columns: repeat(12, minmax(190px, 1fr));
-      gap: 9px;
-      overflow-x: auto;
-      padding: 2px 2px 12px;
-      overscroll-behavior-inline: contain;
+      grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+      gap: 12px;
+      padding: 2px;
     }
 
-    .kanban-column {
+    .kanban-group {
       display: flex;
-      min-height: 270px;
+      min-height: 300px;
       flex-direction: column;
-      padding: 11px;
-    }
-
-    .kanban-column.paused {
-      border-color: rgba(242, 234, 211, 0.08);
-      background: #10121a;
-      filter: grayscale(1);
-      opacity: 0.62;
-    }
-
-    .kanban-column.review {
-      border-color: rgba(232, 106, 74, 0.34);
+      padding: 12px;
     }
 
     .column-head {
@@ -937,6 +937,7 @@
     }
 
     .column-title {
+      margin: 0;
       font-size: 10.5px;
       font-weight: 800;
       line-height: 1.35;
@@ -952,6 +953,88 @@
       color: var(--faint);
       font-size: 9.5px;
       line-height: 1.45;
+    }
+
+    .kanban-state-list {
+      display: grid;
+      gap: 8px;
+      margin-bottom: 12px;
+    }
+
+    .kanban-state {
+      min-width: 0;
+      padding: 9px 10px;
+      border: 1px solid var(--border);
+      border-radius: 8px;
+      background: var(--surface-2);
+    }
+
+    .kanban-state[open] {
+      border-color: var(--border-strong);
+    }
+
+    .kanban-state.paused {
+      border-color: rgba(242, 234, 211, 0.08);
+      background: #10121a;
+      filter: grayscale(1);
+      opacity: 0.66;
+    }
+
+    .kanban-state summary {
+      display: flex;
+      min-width: 0;
+      align-items: flex-start;
+      justify-content: space-between;
+      flex-wrap: wrap;
+      gap: 8px;
+      cursor: pointer;
+      list-style: none;
+    }
+
+    .kanban-state summary::-webkit-details-marker {
+      display: none;
+    }
+
+    .kanban-state summary::after {
+      content: "＋";
+      flex: none;
+      color: var(--faint);
+      font-size: 10px;
+      line-height: 1.4;
+    }
+
+    .kanban-state[open] summary::after {
+      content: "−";
+      color: var(--muted);
+    }
+
+    .kanban-state-name {
+      min-width: 0;
+      color: var(--text);
+      font-size: 10px;
+      font-weight: 760;
+      line-height: 1.4;
+    }
+
+    .kanban-state-badges {
+      display: flex;
+      flex: none;
+      flex-wrap: wrap;
+      justify-content: flex-end;
+      gap: 4px;
+    }
+
+    .kanban-state-rule {
+      margin: 8px 0 0;
+      padding-top: 8px;
+      border-top: 1px solid var(--border);
+      color: var(--faint);
+      font-size: 9.5px;
+      line-height: 1.45;
+    }
+
+    .kanban-view-panel[hidden] {
+      display: none;
     }
 
     .column-empty {
@@ -1327,11 +1410,14 @@
 
       .kanban-board {
         grid-template-columns: 1fr;
-        overflow-x: visible;
       }
 
-      .kanban-column {
+      .kanban-group {
         min-height: 180px;
+      }
+
+      .kanban-filter {
+        flex: 1 1 96px;
       }
 
       .integration-row {
@@ -1635,6 +1721,8 @@
       "Cél-illeszkedés"
     ];
 
+    // Backward-compatible constant name: these entries are the 12 canonical
+    // internal states, not 12 simultaneously visible UI columns.
     const KANBAN_COLUMNS = [
       ["Inbox", "Triage után cél-lánccal léphet tovább; cél nélkül a szabály szerinti Parked kapu érvényes."],
       ["Needs Clarification", "A readiness-checklist bármely hiányzó eleme ide irányít."],
@@ -1642,13 +1730,74 @@
       ["With Codex", "Jóváhagyott brief és megfelelő érzékenységi besorolás szükséges."],
       ["With Claude Code", "Jóváhagyott brief és megfelelő érzékenységi besorolás szükséges."],
       ["With Claude Cowork", "Jóváhagyott brief és megfelelő érzékenységi besorolás szükséges."],
-      ["With Local Runtime", "Zárolt oszlop; reaktiválás csak külön Decision után."],
+      ["With Local Runtime", "Zárolt belső állapot; reaktiválás csak külön Decision után."],
       ["Waiting for User", "Döntésre, adatra, jóváhagyásra vagy kézi lépésre vár."],
       ["Review Needed", "Completion reporttal visszaérkezett eredmény vár emberi review-ra."],
       ["Accepted / Merged", "Elfogadott eredmény, rögzített validálással és completion reporttal."],
       ["Parked", "Tudatos felfüggesztés, látható reaktiválási feltétellel."],
       ["Archived", "Lezárt, csak olvasható referenciaállapot."]
     ];
+
+    const KANBAN_GROUPS = [
+      {
+        id: "intake",
+        name: "Intake / Triage",
+        rule: "Beérkezésből teljes, jóváhagyott brief felé vezető szakasz.",
+        states: [0, 1, 2],
+        empty: "Nincs AgentJob demo-adat. Következő lépés: triage és readiness-checklist."
+      },
+      {
+        id: "progress",
+        name: "In Progress",
+        rule: "A végrehajtó és a Cloud/Local útvonal badge, nem külön életciklus-oszlop.",
+        states: [3, 4, 5, 6],
+        empty: "Nincs aktív AgentJob demo-adat. Következő lépés: csak jóváhagyott brief adható ki."
+      },
+      {
+        id: "waiting",
+        name: "Waiting",
+        rule: "A felhasználói inputra várás külön, látható emberi kapu.",
+        states: [7],
+        empty: "Nincs várakozó AgentJob demo-adat. Következő lépés: a kért döntés vagy jóváhagyás rögzítése."
+      },
+      {
+        id: "review",
+        name: "Review",
+        rule: "Review Needed = 3: warn; 3 fölött crit és új handoff-zár.",
+        states: [8],
+        empty: "Nincs review-ra váró AgentJob demo-adat. Következő lépés: completion report ellenőrzése."
+      },
+      {
+        id: "done",
+        name: "Done",
+        rule: "Elfogadott eredmény, rögzített validálással és completion reporttal.",
+        states: [9],
+        empty: "Nincs elfogadott AgentJob demo-adat. Következő lépés: review után az eredmény lezárása."
+      }
+    ];
+
+    const KANBAN_PASSIVE_VIEWS = {
+      parked: {
+        title: "PARKED",
+        note: "alapból rejtett · reaktiválási feltétellel",
+        state: 10,
+        empty: "Nincs Parked AgentJob demo-adat. Következő lépés: csak látható reaktiválási feltétellel parkolj."
+      },
+      archived: {
+        title: "ARCHIVED",
+        note: "alapból rejtett · csak olvasható",
+        state: 11,
+        empty: "Nincs Archived AgentJob demo-adat. Az archívum lezárt, csak olvasható referencia."
+      }
+    };
+
+    const KANBAN_ROUTE_BADGES = {
+      "With Codex": [["CODEX", "info"], ["CLOUD", "dim"]],
+      "With Claude Code": [["CLAUDE CODE", "info"], ["CLOUD", "dim"]],
+      "With Claude Cowork": [["CLAUDE COWORK", "info"], ["CLOUD", "dim"]],
+      "With Local Runtime": [["LOCAL", "dim"], ["PAUSED", "dim"]],
+      "Review Needed": [["WIP ≤ 3", "dim"]]
+    };
 
     const READINESS_ITEMS = [
       "goal-id — teljes goal-lánc",
@@ -1669,6 +1818,7 @@
     const captureOpen = document.getElementById("captureOpen");
     const captureClose = document.getElementById("captureClose");
     let currentPage = "command";
+    let kanbanView = "active";
     let data = null;
 
     function element(tag, className, text) {
@@ -2143,50 +2293,112 @@
       return root;
     }
 
+    function kanbanStateDetails(index) {
+      const definition = KANBAN_COLUMNS[index];
+      const name = definition[0];
+      const isPaused = name === "With Local Runtime";
+      const details = element("details", "kanban-state" + (isPaused ? " paused" : ""));
+      details.dataset.kanbanState = name;
+      details.dataset.kanbanStateIndex = String(index + 1);
+      if (isPaused) {
+        details.dataset.runtimeState = "paused";
+        details.dataset.entryLocked = "true";
+      }
+
+      const summary = element("summary");
+      const badges = element("span", "kanban-state-badges");
+      (KANBAN_ROUTE_BADGES[name] || []).forEach((badge) => append(badges, tonePill(badge[0], badge[1])));
+      append(summary, element("span", "kanban-state-name", name));
+      if (badges.childElementCount) append(summary, badges);
+      append(details, summary, element("p", "kanban-state-rule", definition[1]));
+      return details;
+    }
+
+    function kanbanGroup(group) {
+      const groupBox = element("section", "kanban-group");
+      groupBox.dataset.kanbanGroup = group.id;
+      const titleId = "kanban-group-" + group.id + "-title";
+      groupBox.setAttribute("aria-labelledby", titleId);
+      const head = element("div", "column-head");
+      const title = element("h3", "column-title", group.name);
+      title.id = titleId;
+      append(
+        head,
+        title,
+        element("span", "column-count", "0")
+      );
+      const states = element("div", "kanban-state-list");
+      group.states.forEach((stateIndex) => append(states, kanbanStateDetails(stateIndex)));
+      append(
+        groupBox,
+        head,
+        element("p", "column-rule", group.rule),
+        states,
+        element("div", "column-empty", group.empty)
+      );
+      return groupBox;
+    }
+
+    function kanbanPassivePanel(view, definition) {
+      const panel = section(definition.title, definition.note);
+      panel.id = "kanban-panel-" + view;
+      panel.classList.add("kanban-view-panel");
+      panel.dataset.kanbanPanel = view;
+      panel.hidden = kanbanView !== view;
+      const box = element("div", "kanban-group");
+      box.dataset.kanbanPassiveView = view;
+      const states = element("div", "kanban-state-list");
+      append(states, kanbanStateDetails(definition.state));
+      append(box, states, element("div", "column-empty", definition.empty));
+      append(panel, box);
+      return panel;
+    }
+
     function renderKanban() {
       const root = pageRoot("kanban");
       const controls = element("div", "callout");
       append(
         controls,
         element("div", "callout-title", "WIP-kapu"),
-        element("p", "", "Review Needed ≤ 3. A limit felett az új agent-handoff vizuálisan zárolt."),
-        actions(actionButton("Új handoff zárolva", "", null))
+        element("p", "", "Review Needed = 3: figyelmeztetés. 3 fölött az új agent-handoff zárolt."),
+        actions(actionButton("Új handoff · 3 fölött zárolt", "", null))
       );
       append(root, controls);
 
-      const boardSection = section("12 OSZLOP", "belépési feltételek · drag-and-drop nélkül");
+      const toolbar = element("div", "kanban-toolbar");
+      toolbar.setAttribute("role", "group");
+      toolbar.setAttribute("aria-label", "Kanban nézet");
+      [
+        ["active", "Aktív flow"],
+        ["parked", "Parked"],
+        ["archived", "Archived"]
+      ].forEach((definition) => {
+        const button = element("button", "button kanban-filter" + (kanbanView === definition[0] ? " active" : ""), definition[1]);
+        button.type = "button";
+        button.dataset.kanbanView = definition[0];
+        button.setAttribute("aria-controls", "kanban-panel-" + definition[0]);
+        button.setAttribute("aria-pressed", kanbanView === definition[0] ? "true" : "false");
+        append(toolbar, button);
+      });
+      append(root, toolbar);
+
+      const boardSection = section("5 MUNKAFOLYAMAT-CSOPORT", "12 belső állapot · drag-and-drop nélkül");
+      boardSection.id = "kanban-panel-active";
+      boardSection.classList.add("kanban-view-panel");
+      boardSection.dataset.kanbanPanel = "active";
+      boardSection.hidden = kanbanView !== "active";
       const boardShell = element("div", "kanban-shell");
       const board = element("div", "kanban-board");
-      board.setAttribute("aria-label", "Agent Kanban oszlopok");
-
-      KANBAN_COLUMNS.forEach((definition, index) => {
-        const name = definition[0];
-        const isPaused = name === "With Local Runtime";
-        const isReview = name === "Review Needed";
-        const column = element("section", "kanban-column" + (isPaused ? " paused" : "") + (isReview ? " review" : ""));
-        column.dataset.kanbanColumn = String(index + 1);
-        if (isPaused) {
-          column.dataset.runtimeState = "paused";
-          column.setAttribute("aria-disabled", "true");
-        }
-        const head = element("div", "column-head");
-        const titleBox = element("div");
-        append(titleBox, element("div", "column-title", name));
-        if (isPaused) append(titleBox, tonePill("PAUSED", "dim"));
-        if (isReview) append(titleBox, tonePill("WIP ≤ 3", "crit"));
-        append(head, titleBox, element("span", "column-count", "—"));
-        append(
-          column,
-          head,
-          element("p", "column-rule", definition[1]),
-          element("div", "column-empty", "Nincs AgentJob demo-adat. Következő lépés: a belépési feltétel teljesítése.")
-        );
-        append(board, column);
-      });
-
+      board.setAttribute("aria-label", "Agent Kanban munkafolyamat-csoportok");
+      KANBAN_GROUPS.forEach((group) => append(board, kanbanGroup(group)));
       append(boardShell, board);
       append(boardSection, boardShell);
-      append(root, boardSection);
+      append(
+        root,
+        boardSection,
+        kanbanPassivePanel("parked", KANBAN_PASSIVE_VIEWS.parked),
+        kanbanPassivePanel("archived", KANBAN_PASSIVE_VIEWS.archived)
+      );
       return root;
     }
 
@@ -2380,6 +2592,14 @@
     }
 
     document.addEventListener("click", (event) => {
+      const kanbanViewButton = event.target.closest("[data-kanban-view]");
+      if (kanbanViewButton && currentPage === "kanban") {
+        kanbanView = kanbanViewButton.dataset.kanbanView;
+        pageContent.replaceChildren(renderKanban());
+        const activeViewButton = pageContent.querySelector('[data-kanban-view="' + kanbanView + '"]');
+        if (activeViewButton) activeViewButton.focus();
+        return;
+      }
       const nav = event.target.closest("[data-nav-page]");
       const mobileNav = event.target.closest("[data-mobile-page]");
       const jump = event.target.closest("[data-jump-page]");
@@ -2458,7 +2678,11 @@
         ready: true,
         pageCount: Object.keys(PAGE_TITLES).length,
         areaCount: LIFE_AREAS.length,
+        // Legacy compatibility: the canonical state list was formerly rendered
+        // as 12 columns. The UI now exposes five workflow groups.
         kanbanColumnCount: KANBAN_COLUMNS.length,
+        kanbanStateCount: KANBAN_COLUMNS.length,
+        kanbanVisibleGroupCount: KANBAN_GROUPS.length,
         capacity: cap
       };
 
