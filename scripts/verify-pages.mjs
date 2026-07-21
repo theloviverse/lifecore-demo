@@ -7,8 +7,14 @@ const requiredFiles = Object.freeze([
   "lifecore-data.js",
   "README.md",
   "site.webmanifest",
+  "assets/apple-touch-icon-180.png",
+  "assets/lifecore-icon-192.png",
+  "assets/lifecore-icon-512.png",
+  "assets/lifecore-icon-maskable-512.png",
   "assets/loviverse-logo.png",
 ]);
+
+const pngSignature = Buffer.from([137, 80, 78, 71, 13, 10, 26, 10]);
 
 function assert(condition, message) {
   if (!condition) {
@@ -16,13 +22,42 @@ function assert(condition, message) {
   }
 }
 
+function pngDimensions(buffer, path) {
+  assert(buffer.length >= 24, `${path} is too small to be a PNG`);
+  assert(
+    buffer.subarray(0, pngSignature.length).equals(pngSignature),
+    `${path} must be a PNG`,
+  );
+  assert(
+    buffer.toString("ascii", 12, 16) === "IHDR",
+    `${path} must contain an IHDR chunk`,
+  );
+
+  return Object.freeze({
+    width: buffer.readUInt32BE(16),
+    height: buffer.readUInt32BE(20),
+  });
+}
+
 try {
   await Promise.all(requiredFiles.map((path) => access(path)));
 
-  const [indexHtml, versionedHtml, manifestText] = await Promise.all([
+  const [
+    indexHtml,
+    versionedHtml,
+    manifestText,
+    appleTouchIcon,
+    icon192,
+    icon512,
+    maskableIcon512,
+  ] = await Promise.all([
     readFile("index.html"),
     readFile("lifecore-v04.html"),
     readFile("site.webmanifest", "utf8"),
+    readFile("assets/apple-touch-icon-180.png"),
+    readFile("assets/lifecore-icon-192.png"),
+    readFile("assets/lifecore-icon-512.png"),
+    readFile("assets/lifecore-icon-maskable-512.png"),
   ]);
 
   assert(
@@ -36,8 +71,34 @@ try {
 
   assert(iconLinks.length === 1, "exactly one favicon link is required");
   assert(
-    /\bhref\s*=\s*["']assets\/loviverse-logo\.png["']/i.test(iconLinks[0]),
-    "the favicon link must reference assets/loviverse-logo.png",
+    /\bhref\s*=\s*["']assets\/lifecore-icon-192\.png["']/i.test(iconLinks[0]),
+    "the favicon link must reference assets/lifecore-icon-192.png",
+  );
+  assert(
+    /\bsizes\s*=\s*["']192x192["']/i.test(iconLinks[0]),
+    "the favicon link must declare its 192x192 size",
+  );
+  assert(
+    /\btype\s*=\s*["']image\/png["']/i.test(iconLinks[0]),
+    "the favicon link must declare image/png",
+  );
+
+  const appleTouchLinks =
+    html.match(/<link\b(?=[^>]*\brel=["']apple-touch-icon["'])[^>]*>/gi) ?? [];
+
+  assert(
+    appleTouchLinks.length === 1,
+    "exactly one apple-touch-icon link is required",
+  );
+  assert(
+    /\bhref\s*=\s*["']assets\/apple-touch-icon-180\.png["']/i.test(
+      appleTouchLinks[0],
+    ),
+    "the apple-touch-icon link must reference assets/apple-touch-icon-180.png",
+  );
+  assert(
+    /\bsizes\s*=\s*["']180x180["']/i.test(appleTouchLinks[0]),
+    "the apple-touch-icon link must declare its 180x180 size",
   );
 
   const manifestLinks =
@@ -99,17 +160,56 @@ try {
     manifest.theme_color === "#0b0f1e",
     "manifest theme_color is invalid",
   );
+  const expectedManifestIcons = Object.freeze([
+    Object.freeze({
+      src: "assets/lifecore-icon-192.png",
+      sizes: "192x192",
+      type: "image/png",
+      purpose: "any",
+    }),
+    Object.freeze({
+      src: "assets/lifecore-icon-512.png",
+      sizes: "512x512",
+      type: "image/png",
+      purpose: "any",
+    }),
+    Object.freeze({
+      src: "assets/lifecore-icon-maskable-512.png",
+      sizes: "512x512",
+      type: "image/png",
+      purpose: "maskable",
+    }),
+  ]);
+
   assert(
     Array.isArray(manifest.icons) &&
-      manifest.icons.some(
-        (icon) =>
-          icon.src === "assets/loviverse-logo.png" &&
-          icon.sizes === "any" &&
-          icon.type === "image/png" &&
-          icon.purpose === "any",
+      manifest.icons.length === expectedManifestIcons.length &&
+      expectedManifestIcons.every((expectedIcon) =>
+        manifest.icons.some(
+          (icon) =>
+            icon.src === expectedIcon.src &&
+            icon.sizes === expectedIcon.sizes &&
+            icon.type === expectedIcon.type &&
+            icon.purpose === expectedIcon.purpose,
+        ),
       ),
     "manifest icon metadata is invalid",
   );
+
+  const iconDimensions = Object.freeze([
+    ["assets/apple-touch-icon-180.png", appleTouchIcon, 180],
+    ["assets/lifecore-icon-192.png", icon192, 192],
+    ["assets/lifecore-icon-512.png", icon512, 512],
+    ["assets/lifecore-icon-maskable-512.png", maskableIcon512, 512],
+  ]);
+
+  for (const [path, buffer, expectedSize] of iconDimensions) {
+    const { width, height } = pngDimensions(buffer, path);
+    assert(
+      width === expectedSize && height === expectedSize,
+      `${path} must be ${expectedSize}x${expectedSize}`,
+    );
+  }
 
   const htmlHash = createHash("sha256").update(indexHtml).digest("hex");
   console.log(
