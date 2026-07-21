@@ -1,0 +1,20 @@
+{
+  "name": "LifeCore OS",
+  "short_name": "LifeCore",
+  "description": "Local-first LifeCore OS public demo.",
+  "lang": "hu",
+  "id": "./",
+  "start_url": "./",
+  "scope": "./",
+  "display": "standalone",
+  "background_color": "#05070f",
+  "theme_color": "#0b0f1e",
+  "icons": [
+    {
+      "src": "assets/loviverse-logo.png",
+      "sizes": "any",
+      "type": "image/png",
+      "purpose": "any"
+    }
+  ]
+}
