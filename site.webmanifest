@@ -11,10 +11,22 @@
   "theme_color": "#0b0f1e",
   "icons": [
     {
-      "src": "assets/loviverse-logo.png",
-      "sizes": "any",
+      "src": "assets/lifecore-icon-192.png",
+      "sizes": "192x192",
       "type": "image/png",
       "purpose": "any"
+    },
+    {
+      "src": "assets/lifecore-icon-512.png",
+      "sizes": "512x512",
+      "type": "image/png",
+      "purpose": "any"
+    },
+    {
+      "src": "assets/lifecore-icon-maskable-512.png",
+      "sizes": "512x512",
+      "type": "image/png",
+      "purpose": "maskable"
     }
   ]
 }
